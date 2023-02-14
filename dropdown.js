@@ -5,7 +5,6 @@ function debounce(func, wait) {
   debounced.forEach((x) => clearTimeout(x));
   const debouncedFunc = setTimeout(() => {
     func();
-    console.log("func");
   }, wait || 0);
   debounced.push(debouncedFunc);
 }
@@ -35,7 +34,6 @@ async function translateBiggerTexts(text, source, target) {
       source,
       target
     );
-    console.log("index " + i + " translation: " + translation);
     result.push(translation);
   }
   return result.join(" ");
@@ -117,9 +115,6 @@ async function onSelection(text) {
   
   // await (async () => new Promise((x) => setTimeout(x, 1000)))()
 
-  console.log('dropdown.offsetHeight', dropdown.offsetHeight)
-  console.log(rect.y, rect.height);
-  console.log(rect.y + rect.height + 5 > 300)
   if(rect.y + rect.height + 5 > window.innerHeight - dropdown.offsetHeight - 10) {
     dropdown.style.top = (window.pageYOffset + rect.y - 5 - dropdown.offsetHeight) + "px";
     styleUl = dropdown.querySelector('ul').style;
@@ -147,20 +142,17 @@ function showDropdownMenu() {
   hideDropdownMenu();
   const selection = window.getSelection();
   const text = selection.toString();
-  console.log("Selected text: " + text);
   if (text) onSelection(text);
   else hideDropdownMenu();
 }
 
 function askGPT(text) {
-  console.log('askGPT')
   if(window.location.href.indexOf('https://chat.openai.com') === 0) 
     return query(text);
 
   // otherwise open a new tab
   let url = new URL(`https://chat.openai.com/chat`)
   url.searchParams.set('q', encodeURIComponent(text));
-  console.log('url.href ', url.href);
   window.open(url, "_blank");
 }
 
@@ -168,7 +160,6 @@ function askGPT(text) {
 function query(text) {
   document.querySelector("textarea").value = decodeURIComponent(text);
   const buttons = document.querySelectorAll("button");
-  console.log({buttons})
   if(buttons?.length > 0) {
       const sendButton = document.querySelector("#__next > div.overflow-hidden.w-full.h-full.relative > div > main > div.absolute.bottom-0.left-0.w-full.border-t.md\\:border-t-0.dark\\:border-white\\/20.md\\:border-transparent.md\\:dark\\:border-transparent.md\\:bg-vert-light-gradient.bg-white.dark\\:bg-gray-800.md\\:\\!bg-transparent.dark\\:md\\:bg-vert-dark-gradient > form > div > div.flex.flex-col.w-full.py-2.flex-grow.md\\:py-3.md\\:pl-4.relative.border.border-black\\/10.bg-white.dark\\:border-gray-900\\/50.dark\\:text-white.dark\\:bg-gray-700.rounded-md.shadow-\\[0_0_10px_rgba\\(0\\,0\\,0\\,0\\.10\\)\\].dark\\:shadow-\\[0_0_15px_rgba\\(0\\,0\\,0\\,0\\.10\\)\\] > button") 
                           || buttons[buttons.length - 1];
