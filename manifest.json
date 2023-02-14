@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Dropdown Powers",
+  "version": "1.0",
+  "description": "Creates dropdown menu with quick links with selected text",
+  "content_scripts": [
+    {
+      "js": ["dropdown.js"],
+      "matches": [ "*://*/*" ],
+      "css": ["dropdown.css"]
+    },
+    {
+      "js": ["gpt.js"],
+      "matches": [
+        "https://chat.openai.com/chat*",
+        "https://www.chat.openai.com/chat*"
+      ]
+    }
+  ]
+}
