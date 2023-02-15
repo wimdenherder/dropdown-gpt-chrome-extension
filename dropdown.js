@@ -65,6 +65,7 @@ async function onSelection(text) {
 
   // Add some sample menu items
   const items = [
+    { name: "Copy", func: () => navigator.clipboard.writeText(text) },
     { name: "GPT explain", func: () => askGPT('Explain the following: ' + text) },
     {
       name: "Wikipedia",
