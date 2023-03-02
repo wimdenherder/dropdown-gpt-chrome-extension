@@ -1,13 +1,14 @@
-let apiKey = '';
+let showGPT = false;
+let apiKeyChatGPT = '';
 
-fetch('credentials.json')
-  .then(response => response.json())
-  .then(data => {
-    apiKey = data.apiKey;
+// fetch('./credentials.json')
+//   .then(response => response.json())
+//   .then(data => {
+    apiKeyChatGPT = '';//data.apiKey;
     document.addEventListener("selectionchange", () =>
       debounce(showDropdownMenu, 1000)
     );
-});
+// });
 
 const idDropdownMenu = "dropdown123";
 const debounced = [];
@@ -38,7 +39,10 @@ async function chatGPT(text) {
     },
     body: JSON.stringify({
       model: 'gpt-3.5-turbo',
-      messages 
+      messages: [{
+        'role': 'user',
+        'content': text
+      }]
     })
   })).json();
   return data.choices[0].message.content;
@@ -120,10 +124,10 @@ async function onSelection(text) {
       url: `https://translate.google.com/?sl=${fromLang}&tl=nl&text=${text}&op=translate`,
     });
 
-    // chatGPT(text)
+  if(showGPT)
     items.unshift({
       name:
-        "GPT: " + await chatGPT(text.split(' ').slice(0,1000).join(' ')),
+        "GPT: " + await chatGPT('explain: ' + text.split(' ').slice(0,1000).join(' ')),
       url: `https://chat.openai.com/`,
     });
 

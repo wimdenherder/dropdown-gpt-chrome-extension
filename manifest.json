@@ -16,5 +16,11 @@
         "https://www.chat.openai.com/chat*"
       ]
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [ "credentials.json" ],
+      "matches": [ "<all_urls>" ]
+    }
   ]
 }
