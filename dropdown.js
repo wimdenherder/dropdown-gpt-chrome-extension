@@ -1,3 +1,14 @@
+let apiKey = '';
+
+fetch('credentials.json')
+  .then(response => response.json())
+  .then(data => {
+    apiKey = data.apiKey;
+    document.addEventListener("selectionchange", () =>
+      debounce(showDropdownMenu, 1000)
+    );
+});
+
 const idDropdownMenu = "dropdown123";
 const debounced = [];
 
@@ -16,6 +27,21 @@ async function translate(text, source, target) {
   );
   const json = await response.json();
   return json.sentences?.map((x) => x.trans).join(" ");
+}
+
+async function chatGPT(text) {
+  const data = await (await fetch(`https://api.openai.com/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKeyChatGPT}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages 
+    })
+  })).json();
+  return data.choices[0].message.content;
 }
 
 async function detectLanguage(text) {
@@ -67,6 +93,7 @@ async function onSelection(text) {
   const items = [
     { name: "Copy", func: () => navigator.clipboard.writeText(text) },
     { name: "GPT explain", func: () => askGPT('Explain the following: ' + text) },
+    { name: "YouTok", url: "https://youtokker.web.app/?q=" + encodedText },
     {
       name: "Wikipedia",
       url:
@@ -88,9 +115,16 @@ async function onSelection(text) {
   if (fromLang !== "nl")
     items.unshift({
       name:
-        (await translateBiggerTexts(text.slice(0,1000), fromLang, "nl")) +
+        (await translateBiggerTexts(text.split(' ').slice(0,10).join(' '), fromLang, "nl")) +
         ` (${fromLang.toUpperCase()})`,
       url: `https://translate.google.com/?sl=${fromLang}&tl=nl&text=${text}&op=translate`,
+    });
+
+    // chatGPT(text)
+    items.unshift({
+      name:
+        "GPT: " + await chatGPT(text.split(' ').slice(0,1000).join(' ')),
+      url: `https://chat.openai.com/`,
     });
 
   for (const item of items) {
@@ -134,10 +168,6 @@ function hideDropdownMenu() {
   if (!dropdown) return;
   dropdown.style.display = "none";
 }
-
-document.addEventListener("selectionchange", () =>
-  debounce(showDropdownMenu, 200)
-);
 
 function showDropdownMenu() {
   hideDropdownMenu();
