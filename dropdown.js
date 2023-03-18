@@ -95,8 +95,10 @@ async function onSelection(text) {
 
   // Add some sample menu items
   const items = [
+    { name: "Speak", func: () => detectAndSpeak(text) },
     { name: "Copy", func: () => navigator.clipboard.writeText(text) },
     { name: "GPT explain", func: () => askGPT('Explain the following: ' + text) },
+    { name: "Youglish", func: () => detectAndGoToYouglish(text) },
     { name: "YouTok", url: "https://youtokker.web.app/?q=" + encodedText },
     {
       name: "Wikipedia",
@@ -165,6 +167,48 @@ async function onSelection(text) {
     styleUl.display = 'flex';
     styleUl.flexFlow = 'column';
   }
+}
+
+function langCodeToLanguageName(langCode) {
+  const lib = {
+    'en': 'English',
+    'nl': 'Dutch',
+    'fr': 'French',
+    'de': 'German',
+    'it': 'Italian',
+    'es': 'Spanish',
+    'pt': 'Portuguese',
+    'ru': 'Russian',
+    'ja': 'Japanese',
+    'zh': 'Chinese',
+    'ar': 'Arabic',
+    'hi': 'Hindi'
+  }
+  return lib[langCode] || langCode;
+}
+
+async function detectAndGoToYouglish(text) {
+  const langCode = await detectLanguage(text);
+  const url = `https://youglish.com/pronounce/${text}/${langCodeToLanguageName(langCode)}?`
+  openInNewTab(url);
+}
+
+function openInNewTab(url) {
+  window.open(url, '_blank').focus();
+}
+
+async function detectAndSpeak(text) {
+  const langCode = await detectLanguage(text);
+  console.log(langCode)
+  console.log(typeof langCode)
+  speak(text, langCode)
+}
+
+function speak(text, langCode) {
+  const synth = window.speechSynthesis;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.voice = synth.getVoices().find(voice => voice.lang.split('-')[0].toLowerCase() === langCode.split('-')[0].toLowerCase());
+  synth.speak(utterance);
 }
 
 function hideDropdownMenu() {
