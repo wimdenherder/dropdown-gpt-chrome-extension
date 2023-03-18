@@ -18,13 +18,19 @@ async function onload() {
     timeout = 500;
   }
 
-  await (async () => new Promise((x) => setTimeout(x, 500)))()
+  await (async () => new Promise((x) => setTimeout(x, 500)))();
 
-  document.querySelector("#headlessui-listbox-button-\\:r0\\:")?.click();
+  (document.querySelector("#headlessui-listbox-button-\\:r0\\:") || 
+   document.querySelector("#headlessui-listbox-button-\\:r6\\:"))?.click();
 
-  await (async () => new Promise((x) => setTimeout(x, 100)))()
+  await (async () => new Promise((x) => setTimeout(x, 100)))();
 
-  document.querySelector("#headlessui-listbox-button-\\:r0\\:")?.parentNode.querySelector("ul>li:nth-of-type(2)")?.click();
+  (
+    document.querySelector("#headlessui-listbox-button-\\:r0\\:") ||
+    document.querySelector("#headlessui-listbox-button-\\:r6\\:")
+  )?.parentNode
+    .querySelector("ul>li:nth-of-type(3)")
+    ?.click();
 
   const params = new Proxy(new URLSearchParams(window.location.search), {
     get: (searchParams, prop) => searchParams.get(prop),
