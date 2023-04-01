@@ -3,10 +3,14 @@
   "name": "Dropdown Powers",
   "version": "1.0",
   "description": "Creates dropdown menu with quick links with selected text",
+  "host_permissions": ["https://*.openai.com/"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "js": ["dropdown.js"],
-      "matches": [ "*://*/*" ],
+      "matches": ["*://*/*"],
       "css": ["dropdown.css"]
     },
     {

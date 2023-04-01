@@ -1,14 +1,70 @@
 let showGPT = false;
 let apiKeyChatGPT = '';
+let port;
+let optionKeyPressed = false;
+let dropdownMenuIsInView = false;
 
-// fetch('./credentials.json')
-//   .then(response => response.json())
-//   .then(data => {
-    apiKeyChatGPT = '';//data.apiKey;
-    document.addEventListener("selectionchange", () =>
-      debounce(showDropdownMenu, 1000)
-    );
-// });
+console.log("Content script loaded!");
+
+main();
+
+function main() {
+  port = chrome.runtime.connect();
+  port.onMessage.addListener(listener);
+  // fetch('./credentials.json')
+  //   .then(response => response.json())
+  //   .then(data => {
+      // apiKeyChatGPT = '';//data.apiKey;
+      document.addEventListener("selectionchange", () => {
+          hideDropdownMenu();
+          if (optionKeyPressed)
+            debounce(showDropdownMenu, 500);
+        }
+      );
+  // });
+  console.log("Content script loaded!");
+
+  // chrome.runtime.sendMessage("Hello from content script!");
+}
+
+
+document.addEventListener("keydown", function (event) {
+  if (event.altKey) {
+    optionKeyPressed = true;
+    if (dropdownMenuIsInView)
+      hideDropdownMenu();
+    else
+      showDropdownMenu();
+  }
+});
+
+document.addEventListener("keyup", function (event) {
+  if (event.altKey) {
+    optionKeyPressed = false;
+  }
+});
+
+
+function listener(msg) {
+  console.log("incoming message")
+  if(msg.txt) {
+    showChatGPTText(msg.txt);
+  } else if(msg.error) {
+    console.error(msg.error)
+  } else if(msg.event === "DONE") {
+    console.log("DONE");
+  }
+}
+
+function showChatGPTText(text) {
+  console.log('gpt text ' + text);
+  document.getElementById('GPT-box').innerText = text;
+  // const dropdown = document.getElementById(idDropdownMenu);
+  // if(!dropdown) return;
+  // const gptText = dropdown.querySelector(".gpt-text");
+  // if(!gptText) return;
+  // gptText.innerText = text;
+}
 
 const idDropdownMenu = "dropdown123";
 const debounced = [];
@@ -96,9 +152,12 @@ async function onSelection(text) {
   // Add some sample menu items
   const items = [
     { name: "Speak", func: () => detectAndSpeak(text) },
-    { name: "Copy", func: () => navigator.clipboard.writeText(text) },
-    { name: "GPT explain", func: () => askGPT('Explain the following: ' + text) },
-    { name: "Youglish", func: () => detectAndGoToYouglish(text) },
+    // { name: "Copy", func: () => navigator.clipboard.writeText(text) },
+    {
+      name: "GPT explain",
+      func: () => goToGPT(text),
+    },
+    // { name: "Youglish", func: () => detectAndGoToYouglish(text) },
     { name: "YouTok", url: "https://youtokker.web.app/?q=" + encodedText },
     {
       name: "Wikipedia",
@@ -112,10 +171,10 @@ async function onSelection(text) {
       name: "YouTube",
       url: "https://www.youtube.com/results?search_query=" + encodedText,
     },
-    {
-      name: "Spotify",
-      url: "https://open.spotify.com/search/" + encodedText,
-    },
+    // {
+    //   name: "Spotify",
+    //   url: "https://open.spotify.com/search/" + encodedText,
+    // },
   ];
 
   if (fromLang !== "nl")
@@ -133,6 +192,15 @@ async function onSelection(text) {
       url: `https://chat.openai.com/`,
     });
 
+items.unshift({
+  name: "GPT",
+  id: "GPT-box",
+  scrollable: true,
+  func: () => {
+    navigator.clipboard.writeText(document.getElementById("GPT-box").innerText);
+  }
+});
+
   for (const item of items) {
     const li = document.createElement("li");
     const a = document.createElement("a");
@@ -140,6 +208,12 @@ async function onSelection(text) {
       a.setAttribute("href", item.url);
     if(item.func)
       a.addEventListener("click", item.func);
+    if(item.id)
+      a.setAttribute("id", item.id);
+    if(item.scrollable) {
+      a.style.overflowY = 'auto';
+      a.style.height = '200px';
+    }
     
     a.setAttribute("target", "_blank");
 
@@ -153,6 +227,11 @@ async function onSelection(text) {
   
   // Add the dropdown div to the page
   document.body.appendChild(dropdown);
+
+  // query GPT
+  port.postMessage({
+    question: text,
+  });
   
   // await (async () => new Promise((x) => setTimeout(x, 1000)))()
 
@@ -160,7 +239,7 @@ async function onSelection(text) {
     dropdown.style.top = (window.pageYOffset + rect.y - 5 - dropdown.offsetHeight) + "px";
     styleUl = dropdown.querySelector('ul').style;
     styleUl.display = 'flex';
-    styleUl.flexFlow = 'column-reverse';
+    styleUl.flexFlow = 'column';
   } else {
     dropdown.style.top = (window.pageYOffset + rect.y + rect.height + 5) + "px";
     styleUl = dropdown.querySelector('ul').style;
@@ -199,9 +278,7 @@ function openInNewTab(url) {
 
 async function detectAndSpeak(text) {
   const langCode = await detectLanguage(text);
-  console.log(langCode)
-  console.log(typeof langCode)
-  speak(text, langCode)
+  speak(text, '' + langCode)
 }
 
 function speak(text, langCode) {
@@ -215,17 +292,23 @@ function hideDropdownMenu() {
   const dropdown = document.getElementById(idDropdownMenu);
   if (!dropdown) return;
   dropdown.style.display = "none";
+  dropdownMenuIsInView = false;
+  port.postMessage({
+    abort: true
+  });
 }
 
 function showDropdownMenu() {
-  hideDropdownMenu();
+  if(!optionKeyPressed) return;
   const selection = window.getSelection();
   const text = selection.toString();
-  if (text) onSelection(text);
-  else hideDropdownMenu();
+  if (text) {
+    dropdownMenuIsInView = true;
+    onSelection(text);
+  } else hideDropdownMenu();
 }
 
-function askGPT(text) {
+function goToGPT(text) {
   if(window.location.href.indexOf('https://chat.openai.com') === 0) 
     return query(text);
 
