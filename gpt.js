@@ -43,4 +43,5 @@ async function onload() {
   }, timeout);
 }
 
+console.log('GPT loaded')
 onload();

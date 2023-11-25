@@ -15,11 +15,11 @@ chrome.runtime.onConnect.addListener((port) => {
       if(msg.question) {
         controller = new AbortController();
         const token = await getChatGPTApiKey();
-        insertTextIntoGPT(msg.question, token, port, controller);
+        insertTextIntoGPT(msg.question, token, port, controller, msg.rewrite);
         // askGPT("explain the texts above", token, port, controller);
       }
       if(msg.abort) {
-        controller.abort();
+        // controller.abort();
       }
     } catch (err) {
       console.error(err)
@@ -29,7 +29,7 @@ chrome.runtime.onConnect.addListener((port) => {
 })
 
 
-async function insertTextIntoGPT(prompt, token, port, controller) {
+async function insertTextIntoGPT(prompt, token, port, controller, rewrite) {
   const parts = []
   const maxPartSize = 15 * 1000
   while (prompt.length !== 0) {
@@ -101,7 +101,7 @@ async function insertTextIntoGPT(prompt, token, port, controller) {
     }),
     onMessage(message) {
       console.debug("sse message", message);
-      port.postMessage({ txt: message });
+      port.postMessage({ txt: message, rewrite });
       // if (message === "[DONE]") {
       //   params.onEvent({ type: "done" });
       //   cleanup();

@@ -3,6 +3,7 @@ let apiKeyChatGPT = '';
 let port;
 let optionKeyPressed = false;
 let dropdownMenuIsInView = false;
+let lastSelection, lastRange;
 
 console.log("Content script loaded!");
 
@@ -16,8 +17,7 @@ function main() {
   //   .then(data => {
       // apiKeyChatGPT = '';//data.apiKey;
       document.addEventListener("selectionchange", () => {
-          hideDropdownMenu();
-          if (optionKeyPressed)
+          // if (optionKeyPressed)
             debounce(showDropdownMenu, 500);
         }
       );
@@ -29,28 +29,50 @@ function main() {
 
 
 document.addEventListener("keydown", function (event) {
-  if (event.altKey) {
-    optionKeyPressed = true;
-    if (dropdownMenuIsInView)
-      hideDropdownMenu();
-    else
-      showDropdownMenu();
+  if (event.ctrlKey) {
+    if(event.key === "1") {
+      console.log("Ctrl + Shift + 1 is pressed");
+      gptRewrite("Rewrite the following text and use ONLY smileys (be creative!): ");
+    }
+    if(event.key === "2") {
+      console.log("Ctrl + Shift + 2 is pressed");
+      gptRewrite(""); // just the prompt
+    }
+    if(event.key === "3") {
+      console.log("Ctrl + Shift + 3 is pressed");
+      gptRewrite("herschrijf: ");
+    }
+    if(event.key === "4") {
+      console.log("Ctrl + Shift + 4 is pressed");
+      gptRewrite("Herschrijf het in een heel lange russische complexe zin: ");
+    }
   }
+  // if (event.altKey) {
+  //   optionKeyPressed = true;
+  //   if (dropdownMenuIsInView)
+  //     hideDropdownMenu();
+  //   else
+  //     showDropdownMenu();
+  // }
 });
 
-document.addEventListener("keyup", function (event) {
-  if (event.altKey) {
-    optionKeyPressed = false;
-  }
-});
+// document.addEventListener("keyup", function (event) {
+//   if (event.altKey) {
+//     optionKeyPressed = false;
+//   }
+// });
 
 
 function listener(msg) {
   console.log("incoming message")
+  console.log(msg);
   if(msg.txt) {
-    showChatGPTText(msg.txt);
+    if(msg.rewrite)
+      rewriteTextSelection(msg.txt)
+    else
+      showChatGPTText(msg.txt);
   } else if(msg.error) {
-    console.error(msg.error)
+    console.error(msg)
   } else if(msg.event === "DONE") {
     console.log("DONE");
   }
@@ -149,16 +171,25 @@ async function onSelection(text) {
 
   const encodedText = encodeURIComponent(text);
 
+  // speak current selection
+  // detectAndSpeak(text);
+
   // Add some sample menu items
   const items = [
     { name: "Speak", func: () => detectAndSpeak(text) },
     // { name: "Copy", func: () => navigator.clipboard.writeText(text) },
+    // {
+    //   name: "GPT explain",
+    //   func: () => goToGPT(text),
+    // },
     {
-      name: "GPT explain",
-      func: () => goToGPT(text),
+      name: "Just Prompt (Ctrl+Shift+1)"
     },
-    // { name: "Youglish", func: () => detectAndGoToYouglish(text) },
-    { name: "YouTok", url: "https://youtokker.web.app/?q=" + encodedText },
+    {
+      name: "Smileys (Ctrl+Shift+2)"
+    },
+    { name: "Youglish", func: () => detectAndGoToYouglish(text) },
+    { name: "YouTok", url: "http://localhost:3000/?q=" + encodedText },
     {
       name: "Wikipedia",
       url:
@@ -180,7 +211,7 @@ async function onSelection(text) {
   if (fromLang !== "nl")
     items.unshift({
       name:
-        (await translateBiggerTexts(text.split(' ').slice(0,10).join(' '), fromLang, "nl")) +
+        (await translateBiggerTexts(text.split(' ').slice(0,40).join(' '), fromLang, "nl")) +
         ` (${fromLang.toUpperCase()})`,
       url: `https://translate.google.com/?sl=${fromLang}&tl=nl&text=${text}&op=translate`,
     });
@@ -229,9 +260,9 @@ items.unshift({
   document.body.appendChild(dropdown);
 
   // query GPT
-  port.postMessage({
-    question: text,
-  });
+  // port.postMessage({
+  //   question: text,
+  // });
   
   // await (async () => new Promise((x) => setTimeout(x, 1000)))()
 
@@ -299,13 +330,16 @@ function hideDropdownMenu() {
 }
 
 function showDropdownMenu() {
-  if(!optionKeyPressed) return;
+  // if(!optionKeyPressed) return;
   const selection = window.getSelection();
   const text = selection.toString();
+  console.log('selection: ' + text);
   if (text) {
     dropdownMenuIsInView = true;
     onSelection(text);
-  } else hideDropdownMenu();
+  } else {
+    hideDropdownMenu();
+  }
 }
 
 function goToGPT(text) {
@@ -318,6 +352,147 @@ function goToGPT(text) {
   window.open(url, "_blank");
 }
 
+async function gptRewrite(prompt) {
+  const selection = window.getSelection();
+  const text = selection.toString();
+  console.log('gptRewrite(' + text + ')');
+  try {
+    await port.postMessage({ abort: true });
+  } catch(err) {
+    console.error(err);
+  }
+
+  port.postMessage({ 
+    question: prompt + ": " + text,
+    rewrite: true
+  });
+}
+
+
+let modalObservable;
+function Observable() {
+  this.listeners = [];
+}
+
+Observable.prototype.subscribe = function(callback) {
+  this.listeners.push(callback);
+}
+
+Observable.prototype.update = function(value) {
+  this.value = value;
+  for (let callback of this.listeners) {
+      callback(value);
+  }
+}
+
+
+function rewriteTextSelection(replacementText) {
+  if(replacementText) hideDropdownMenu();
+  console.log('rewriteTextSelection("' + replacementText + '")');
+  if(document.querySelector('.dropdownModal')) {
+    console.log('modal is open');
+    modalObservable.update(replacementText);
+    return;
+  }
+  if(!modalObservable)
+    modalObservable = new Observable();
+  showModal(modalObservable, function(response) {
+      if (response) {
+          console.log("User clicked YES");
+          navigator.clipboard.writeText(modalObservable.value);
+      } else {
+          console.log("User clicked NO");
+          port.postMessage({
+            abort: true
+          });
+      }
+  });
+  modalObservable.update(replacementText);
+}
+
+function showModal(textOrObservable, callback) {
+  // Create elements
+  const modal = document.createElement('div');
+  modal.classList.add('dropdownModal');
+  const content = document.createElement('div');
+  const message = document.createElement('p');
+  const yesButton = document.createElement('button');
+  const noButton = document.createElement('button');
+
+  // Apply styles
+  Object.assign(modal.style, {
+    zIndex: '1000',
+    position: 'fixed',
+    top: '0',
+    left: '0',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dark background
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center'
+  });
+  
+  Object.assign(content.style, {
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '10px',
+    width: '300px',
+    maxWidth: '80%',
+    textAlign: 'center'
+  });
+  
+  Object.assign(yesButton.style, {
+    backgroundColor: 'lightgreen',
+    marginRight: '10px',
+    padding: '5px 10px'
+  });
+  yesButton.textContent = 'YES';
+  
+  Object.assign(noButton.style, {
+    backgroundColor: 'lightcoral',
+    padding: '5px 10px'
+  });
+  noButton.textContent = 'NO';
+  
+
+  // Add text
+  if(typeof textOrObservable === 'string') {
+    message.textContent = textOrObservable;
+  } else {
+    textOrObservable.subscribe((value) => {
+      message.textContent = value;
+    });
+  }
+
+  // Add click events
+  modal.addEventListener('click', () => {
+      modal.remove();
+  });
+
+  content.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  yesButton.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent triggering of background click event
+      modal.remove();
+      callback(true);
+  });
+
+  noButton.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent triggering of background click event
+      modal.remove();
+      callback(false);
+  });
+
+  // Add elements to DOM
+  content.appendChild(message);
+  content.appendChild(yesButton);
+  content.appendChild(noButton);
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+}
 
 function query(text) {
   document.querySelector("textarea").value = decodeURIComponent(text);
@@ -328,4 +503,13 @@ function query(text) {
       sendButton.click();
   }
   document.querySelector("#__next > div.overflow-hidden.w-full.h-full.relative > div.flex.h-full.flex-1.flex-col.md\\:pl-\\[260px\\] > main > div.flex-1.overflow-hidden > div > div > button")?.click()
+}
+
+function newQuery(text) {
+  document.querySelector("#prompt-textarea").value = text; // decodeURIComponent(text);
+  const buttons = document.querySelectorAll("button");
+  buttons[buttons.length - 1].disabled = false;
+  buttons[buttons.length - 1].style.backgroundColor = 'rgb(25, 195, 125)';
+
+  buttons[buttons.length - 1].click();
 }
